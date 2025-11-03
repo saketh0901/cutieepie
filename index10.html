@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hey Sundari</title>
+  <style>
+    :root{
+      --bg1: #ffb6c1;
+      --bg2: #e6e6fa;
+      --accent: #ff69b4;
+      --white: #fff;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: linear-gradient(135deg,var(--bg1),var(--bg2));
+      overflow:hidden;
+      padding:20px;
+      box-sizing:border-box;
+    }
+
+    .card {
+      width:100%;
+      max-width:900px;
+      min-height:60vh;
+      background: rgba(255,255,255,0.04);
+      border-radius:18px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      padding:36px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      position:relative; /* important for button absolute positions */
+      overflow:visible;
+    }
+
+    h1, h2 {
+      color: var(--white);
+      text-align:center;
+      margin:0;
+      opacity:0;
+      transform: translateY(8px);
+      animation: fadeInUp 700ms forwards;
+    }
+    h1 { font-size:1.2rem; font-weight:600; animation-delay:300ms; }
+    h2 { font-size:2.2rem; margin-top:12px; font-weight:700; animation-delay:1600ms; }
+
+    .buttons {
+      margin-top:36px;
+      width:100%;
+      max-width:560px;
+      height:120px;
+      position:relative; /* container for absolutely-positioned buttons */
+      opacity:0;
+      animation: fadeInUp 700ms 2600ms forwards;
+    }
+
+    button {
+      padding:12px 28px;
+      font-size:1.05rem;
+      border-radius:28px;
+      border: none;
+      cursor: pointer;
+      user-select:none;
+      transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      position:absolute;
+      white-space:nowrap;
+    }
+
+    #yesBtn {
+      left: calc(50% - 90px);
+      top: calc(50% - 28px);
+      transform: translate(-50%,-50%);
+      background: linear-gradient(90deg,var(--accent), #ff85c1);
+      color: var(--white);
+      border: 0;
+    }
+    #yesBtn:active { transform: translate(-50%,-50%) scale(.98); }
+
+    #noBtn {
+      left: calc(50% + 110px);
+      top: calc(50% - 28px);
+      transform: translate(-50%,-50%);
+      background: var(--white);
+      color: var(--accent);
+      border: 2px solid var(--accent);
+    }
+
+    #noBtn:hover { transform: translate(-50%,-50%) scale(1.03); }
+
+    /* make movements smooth */
+    #noBtn, #yesBtn { transition: left 420ms ease, top 420ms ease, transform 180ms ease, opacity 220ms ease; }
+
+    @keyframes fadeInUp{
+      from{ opacity:0; transform: translateY(8px); }
+      to{ opacity:1; transform: translateY(0); }
+    }
+
+    /* floating hearts */
+    .heart {
+      position:absolute;
+      font-size:22px;
+      pointer-events:none;
+      animation: floatUp linear forwards;
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.12));
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(1); opacity:1; }
+      100% { transform: translateY(-110vh) scale(1.6); opacity:0; }
+    }
+
+    /* final message */
+    #finalMessage {
+      display:none;
+      color: var(--white);
+      font-size:1.8rem;
+      text-align:center;
+      margin-top:14px;
+      animation: fadeInUp 600ms forwards;
+    }
+
+    /* responsive tweaks */
+    @media (max-width:520px) {
+      h2 { font-size:1.6rem; }
+      .buttons { height:140px; }
+      #yesBtn { left:50%; top:36px; transform: translateX(-50%); }
+      #noBtn { left:50%; top:92px; transform: translateX(-50%); }
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <h1 id="intro">Hey Sundari... I have something important to ask you.</h1>
+    <h2 id="main">Will you be mine? 💖</h2>
+
+    <div class="buttons" id="buttonsArea" aria-hidden="false">
+      <button id="yesBtn" aria-label="Yes">Yes 😍</button>
+      <button id="noBtn" aria-label="No">No 😅</button>
+    </div>
+
+    <div id="finalMessage">You just made me the happiest person alive, Sundari 💕</div>
+  </div>
+
+  <script>
+    // ---- Elements ----
+    const noBtn = document.getElementById('noBtn');
+    const yesBtn = document.getElementById('yesBtn');
+    const finalMessage = document.getElementById('finalMessage');
+    const buttonsArea = document.getElementById('buttonsArea');
+    const card = document.getElementById('card');
+
+    // ---- "No" button text sequence ----
+    const noSequence = [
+      "Are you sure?",
+      "Really?",
+      "Think again!",
+      "Don't be silly!",
+      "Give it a chance!",
+      "Are you certain?",
+      "Last chance!"
+    ];
+    let noIndex = 0; // counts how many times it's been clicked
+
+    // helper: random position inside card (keeps button visible)
+    function moveElementRandomly(elem) {
+      const areaRect = card.getBoundingClientRect();
+      const btnRect = elem.getBoundingClientRect();
+      // compute padding so button doesn't go offscreen
+      const padding = 12;
+      const maxLeft = Math.max(areaRect.width - btnRect.width - padding, padding);
+      const maxTop = Math.max(areaRect.height - btnRect.height - padding, padding);
+
+      // get random coords relative to the card
+      const left = Math.random() * maxLeft + padding;
+      const top = Math.random() * maxTop + padding;
+
+      // set as px relative to the card (buttonsArea is positioned within card)
+      // Note: elem is absolutely-positioned within .buttons, but .buttons may be smaller; to keep simpler, we position relative to card using offsetLeft/Top
+      // We'll convert to viewport coords by using card's left/top
+      // However CSS 'left' and 'top' used are relative to the nearest positioned ancestor (.buttons). We'll set position relative to card by moving element to card coordinates via translate.
+      // Simpler approach: place button by setting left/top CSS relative to card using calc% - use element.style.left/top in px relative to card.
+      const cardRect = card.getBoundingClientRect();
+      const relLeft = left;
+      const relTop = top;
+
+      // We must set elem's position relative to card: make elem appended to card and set left/top.
+      // To keep code simple, we ensure .buttons has same size as card and position:relative; so earlier .buttons has position:relative and height set, but to be safe, we will position relative to card.
+      // Set using viewport coords via transform:
+      const viewportLeft = cardRect.left + relLeft;
+      const viewportTop = cardRect.top + relTop;
+
+      // Convert viewport coords back to values for element's style left/top relative to its offsetParent (which is .buttons). We'll use elem.offsetParent to compute offsetParent rect:
+      const parentRect = elem.offsetParent.getBoundingClientRect();
+      const leftRelParent = viewportLeft - parentRect.left;
+      const topRelParent = viewportTop - parentRect.top;
+
+      // apply with some breathing room
+      elem.style.left = Math.max(8, leftRelParent) + 'px';
+      elem.style.top = Math.max(8, topRelParent) + 'px';
+    }
+
+    // initial gentle random offset for playful look
+    setTimeout(() => {
+      // put yes and no into nicer starting places
+      try {
+        // center yes
+        const parentRect = noBtn.offsetParent.getBoundingClientRect();
+        yesBtn.style.left = (parentRect.width * 0.5 - yesBtn.offsetWidth/2) + 'px';
+        yesBtn.style.top  = (parentRect.height * 0.45 - yesBtn.offsetHeight/2) + 'px';
+        // place no to the right
+        noBtn.style.left  = (parentRect.width * 0.75 - noBtn.offsetWidth/2) + 'px';
+        noBtn.style.top   = (parentRect.height * 0.55 - noBtn.offsetHeight/2) + 'px';
+      } catch(e){}
+    }, 600);
+
+    // Move away on hover/touchstart to be extra cheeky (still respects click sequencing)
+    function dodgeOnHover() {
+      // small shift to avoid direct pointer, but do not increment noIndex
+      moveElementRandomly(noBtn);
+    }
+    noBtn.addEventListener('mouseover', dodgeOnHover);
+    noBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // prevent immediate click on touch devices
+      dodgeOnHover();
+    }, {passive:false});
+
+    // when No is clicked, progress through text sequence and move
+    function handleNoClick(e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      if (noIndex < noSequence.length) {
+        // update text to the current prompt in the sequence
+        noBtn.textContent = noSequence[noIndex];
+        // move the button around
+        moveElementRandomly(noBtn);
+        noIndex++;
+      } else {
+        // final: remove the No button entirely and center the Yes button
+        noBtn.style.opacity = '0';
+        noBtn.style.pointerEvents = 'none';
+        setTimeout(() => {
+          noBtn.remove();
+        }, 420);
+
+        // center and enlarge Yes button slightly to celebrate
+        // compute parent and center
+        const parentRect = yesBtn.offsetParent.getBoundingClientRect();
+        yesBtn.style.left = (parentRect.width/2 - yesBtn.offsetWidth/2) + 'px';
+        yesBtn.style.top  = (parentRect.height/2 - yesBtn.offsetHeight/2) + 'px';
+        yesBtn.style.transform = 'translate(0,0) scale(1.06)';
+        yesBtn.focus();
+      }
+    }
+
+    noBtn.addEventListener('click', handleNoClick);
+    // for mobile / some browsers also attach touchend
+    noBtn.addEventListener('touchend', (e) => {
+      // treat as click
+      handleNoClick(e);
+    });
+
+    // ---- Yes button behavior ----
+    yesBtn.addEventListener('click', () => {
+      // hide buttons and intro, show final message + hearts
+      try {
+        buttonsArea.style.display = 'none';
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('main').style.display = 'none';
+      } catch(e){}
+
+      finalMessage.style.display = 'block';
+      finalMessage.style.opacity = '0';
+      finalMessage.style.transform = 'translateY(6px)';
+      setTimeout(() => {
+        finalMessage.style.opacity = '1';
+        finalMessage.style.transform = 'translateY(0)';
+      }, 40);
+
+      // create a heart shower
+      for (let i = 0; i < 28; i++) createHeart();
+      const shower = setInterval(() => createHeart(), 300);
+      setTimeout(() => clearInterval(shower), 4200);
+    });
+
+    // ---- heart creation ----
+    function createHeart() {
+      const heart = document.createElement('div');
+      heart.className = 'heart';
+      heart.textContent = '💖';
+      document.body.appendChild(heart);
+
+      // random starting left across viewport
+      const startLeft = Math.random() * (window.innerWidth - 30);
+      const startTop  = window.innerHeight + 20; // start from below viewport for nice rise
+
+      heart.style.left = startLeft + 'px';
+      heart.style.top  = startTop + 'px';
+      heart.style.fontSize = (14 + Math.random() * 28) + 'px';
+      heart.style.opacity = '0.98';
+      heart.style.animationDuration = (3 + Math.random() * 3) + 's';
+
+      // remove after animation
+      setTimeout(() => {
+        try { heart.remove(); } catch(e){}
+      }, 7000);
+    }
+
+    // small interval hearts while intro visible
+    const heartInterval = setInterval(() => {
+      // only while main text visible
+      if (document.getElementById('main').style.display !== 'none') createHeart();
+    }, 800);
+
+    // after a while stop the ambient hearts (so not forever)
+    setTimeout(() => clearInterval(heartInterval), 25000);
+
+    // Ensure layout adapts when window resizes (keeps buttons inside)
+    window.addEventListener('resize', () => {
+      // if the no button still exists, ensure it's inside bounds
+      if (document.body.contains(noBtn)) {
+        moveElementRandomly(noBtn);
+      }
+      // center yes if no is gone
+      if (!document.body.contains(noBtn)) {
+        const parentRect = yesBtn.offsetParent.getBoundingClientRect();
+        yesBtn.style.left = (parentRect.width/2 - yesBtn.offsetWidth/2) + 'px';
+        yesBtn.style.top  = (parentRect.height/2 - yesBtn.offsetHeight/2) + 'px';
+      }
+    });
+
+    // Accessibility: allow keyboard "n" to trigger the no-button cheekiness (for testing)
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key.toLowerCase() === 'n' && document.body.contains(noBtn)) {
+        // treat like a click
+        handleNoClick(new Event('keyboard'));
+      }
+      if (ev.key.toLowerCase() === 'y') {
+        yesBtn.click();
+      }
+    });
+
+  </script>
+</body>
+</html>
